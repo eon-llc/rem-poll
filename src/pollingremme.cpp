@@ -62,25 +62,30 @@ void pollingremme::vote(name user, uint64_t poll_id, uint8_t option_id) {
   }
 
   // check if this voter can vote
-  votes_table votes(get_self(), get_self().value);
+  votes_table votes(get_self(), user.value);
   check(option_id < p.options.size(), "Option with this id does not exist in this poll.");
   check(votes.find(p.id) == votes.end(), "This account has already voted in this poll.");
+
+  uint64_t weight;
+
+  if(p.is_token_poll) {
+    weight = get_voter_stake(user);
+  } else {
+    weight = 1;
+  }
 
   votes.emplace(user, [&](auto& v) {
     time_point ct = current_time_point();
 
     v.poll_id = poll_id;
     v.user = user;
+    v.weight = weight;
     v.option_id = option_id;
     v.created_at = ct;
   });
 
   polls.modify(p, user, [&](auto& p) {
-    if(p.is_token_poll) {
-        p.options[option_id].votes += get_voter_stake(user);
-    } else {
-        p.options[option_id].votes += 1;
-    }
+    p.options[option_id].votes += weight;
   });
 }
 

@@ -65,6 +65,7 @@ class [[eosio::contract("pollingremme")]] pollingremme : public eosio::contract 
     struct [[eosio::table]] vote_t {
         uint64_t        poll_id;
         name            user;
+        uint64_t        weight;
         uint8_t         option_id;
         time_point      created_at;
 
