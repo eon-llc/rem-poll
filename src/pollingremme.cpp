@@ -62,9 +62,9 @@ void pollingremme::vote(name user, uint64_t poll_id, uint8_t option_id) {
   }
 
   // check if this voter can vote
-  votes_table votes(get_self(), user.value);
+  votes_table votes(get_self(), poll_id);
   check(option_id < p.options.size(), "Option with this id does not exist in this poll.");
-  check(votes.find(p.id) == votes.end(), "This account has already voted in this poll.");
+  check(votes.find(user.value) == votes.end(), "This account has already voted in this poll.");
 
   uint64_t weight;
 
@@ -97,12 +97,15 @@ void pollingremme::comment(name user, uint64_t poll_id, string message) {
   polls_table polls(get_self(), get_self().value);
   const poll_t & p = polls.get(poll_id, "Poll with this id does not exist.");
 
-  comments_table comments(get_self(), get_self().value);
+  comments_table comments(get_self(), poll_id);
   check(!message.empty(), "Message can't be blank.");
+
+  uint64_t id = comments.available_primary_key();
 
   comments.emplace(user, [&](auto& c) {
     time_point ct = current_time_point();
 
+    c.id = id;
     c.poll_id = poll_id;
     c.user = user;
     c.message = message;
@@ -136,7 +139,7 @@ bool pollingremme::is_guardian( const name& user ) const {
     return exists && enough_staked && is_active;
 }
 
-void pollingremme::deletedata() {
+void pollingremme::deletedata(int64_t poll_id) {
     require_auth(get_self());
 
     // delete polls
@@ -147,14 +150,14 @@ void pollingremme::deletedata() {
     }
 
     // delete votes
-    votes_table votes(get_self(), get_self().value);
+    votes_table votes(get_self(), poll_id);
     auto v_itr = votes.begin();
     while(v_itr != votes.end()){
         v_itr = votes.erase(v_itr);
     }
 
     // delete comments
-    comments_table comments(get_self(), get_self().value);
+    comments_table comments(get_self(), poll_id);
     auto c_itr = comments.begin();
     while(c_itr != comments.end()){
         c_itr = comments.erase(c_itr);

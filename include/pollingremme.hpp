@@ -38,7 +38,7 @@ class [[eosio::contract("pollingremme")]] pollingremme : public eosio::contract 
     void comment(name user, uint64_t poll_id, string message);
 
     [[eosio::action]]
-    void deletedata();
+    void deletedata(int64_t poll_id);
 
   private:
 
@@ -59,7 +59,6 @@ class [[eosio::contract("pollingremme")]] pollingremme : public eosio::contract 
         time_point      expires_at;
 
         uint64_t        primary_key() const { return id; }
-        uint64_t        get_reverse_key() const { return ~id; }
     };
 
     struct [[eosio::table]] vote_t {
@@ -69,18 +68,17 @@ class [[eosio::contract("pollingremme")]] pollingremme : public eosio::contract 
         uint8_t         option_id;
         time_point      created_at;
 
-        uint64_t        primary_key() const { return poll_id; }
-        uint64_t        get_reverse_key() const { return ~poll_id; }
+        uint64_t        primary_key() const { return user.value; }
     };
 
     struct [[eosio::table]] comment_t {
+        uint64_t        id;
         uint64_t        poll_id;
         name            user;
         string          message;
         time_point      created_at;
 
-        uint64_t        primary_key() const { return poll_id; }
-        uint64_t        get_reverse_key() const { return ~poll_id; }
+        uint64_t        primary_key() const { return id; }
     };
 
     typedef multi_index<name("polls"), poll_t> polls_table;
