@@ -100,6 +100,24 @@ void pollingremme::comment(name user, uint64_t poll_id, string message) {
   comments_table comments(get_self(), poll_id);
   check(!message.empty(), "Message can't be blank.");
 
+  // rate limit comments to 1 per 60 seconds
+  const auto ct = current_time_point().sec_since_epoch();
+  const auto rate_limit = 60;
+  auto most_recent_comment = rate_limit + 1;
+  bool has_prior_comment = false;
+
+  for (auto iter = comments.begin(); iter != comments.end() && iter->user == user; iter++) {
+
+    has_prior_comment = true;
+
+    if(ct - iter->created_at.sec_since_epoch() < most_recent_comment) {
+      most_recent_comment = ct - iter->created_at.sec_since_epoch();
+    }
+  }
+
+  check(!has_prior_comment || (has_prior_comment && most_recent_comment > rate_limit), "Comments are limited to 1 for every " + to_string(rate_limit) + " seconds.");
+
+  // save new comment
   uint64_t id = comments.available_primary_key();
 
   comments.emplace(user, [&](auto& c) {
@@ -113,12 +131,12 @@ void pollingremme::comment(name user, uint64_t poll_id, string message) {
   });
 }
 
-uint32_t pollingremme::get_voter_stake( const name& user ) const {
+uint64_t pollingremme::get_voter_stake( const name& user ) const {
     eosiosystem::voters_table _voters_table( system_account, system_account.value );
     auto voter = _voters_table.find( user.value );
 
     if(voter != _voters_table.end()) {
-        return voter->staked;
+        return voter->locked_stake;
     } else {
         return 0;
     }
@@ -134,7 +152,7 @@ bool pollingremme::is_guardian( const name& user ) const {
     eosiosystem::voters_table _voters_table( system_account, system_account.value );
     auto voter = _voters_table.find( user.value );
     bool exists = voter != _voters_table.end();
-    bool enough_staked = voter->staked >= guardian_stake_threshold;
+    bool enough_staked = voter->locked_stake >= guardian_stake_threshold;
     bool is_active = voter->last_reassertion_time.sec_since_epoch() > (current_time_point().sec_since_epoch() - 60*60*24*30);
     return exists && enough_staked && is_active;
 }

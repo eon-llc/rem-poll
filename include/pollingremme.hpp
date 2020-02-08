@@ -85,7 +85,7 @@ class [[eosio::contract("pollingremme")]] pollingremme : public eosio::contract 
     typedef multi_index<name("votes"), vote_t> votes_table;
     typedef multi_index<name("comments"), comment_t> comments_table;
 
-    uint32_t get_voter_stake( const name& user ) const;
+    uint64_t get_voter_stake( const name& user ) const;
     bool is_producer( const name& user ) const;
     bool is_guardian( const name& user ) const;
 };
